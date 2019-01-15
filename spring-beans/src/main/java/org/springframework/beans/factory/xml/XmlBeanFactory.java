@@ -68,6 +68,7 @@ public class XmlBeanFactory extends DefaultListableBeanFactory {
 	}
 
 	/**
+	 * 当Resource完成配置文件的封装工作之后， 配置文件的读取就全交给XmlBeanDefinitionReader处理
 	 * Create a new XmlBeanFactory with the given input stream,
 	 * which must be parsable using DOM.
 	 * @param resource XML resource to load bean definitions from
