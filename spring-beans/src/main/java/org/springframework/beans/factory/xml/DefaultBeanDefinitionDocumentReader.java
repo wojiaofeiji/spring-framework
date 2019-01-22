@@ -120,10 +120,12 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		// the new (child) delegate with a reference to the parent for fallback purposes,
 		// then ultimately reset this.delegate back to its original (parent) reference.
 		// this behavior emulates a stack of delegates without actually necessitating one.
+		//专门处理解析
 		BeanDefinitionParserDelegate parent = this.delegate;
 		this.delegate = createDelegate(getReaderContext(), root, parent);
 
 		if (this.delegate.isDefaultNamespace(root)) {
+			//处理profile属性
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
 			if (StringUtils.hasText(profileSpec)) {
 				String[] specifiedProfiles = StringUtils.tokenizeToStringArray(
@@ -138,8 +140,14 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			}
 		}
 
+		//解析前后的代码是空的, 这是面向对象设计中常说的一句话, 一个类要么面向继承设计, 要么就用final修饰
+		//此处没有用final修饰, 所以是面对继承设计, 这两个方法是为了子类设计
+		//属于设计模式中的, 模版方法模式
+		//如果子类需要在bean解析前后做一些处理的话, 那么只需要重写这两个方法即可
+		//解析前的处理, 内部为空, 留给子类实现
 		preProcessXml(root);
 		parseBeanDefinitions(root, this.delegate);
+		//解析后的处理, 内部为空, 留给子类实现
 		postProcessXml(root);
 
 		this.delegate = parent;
