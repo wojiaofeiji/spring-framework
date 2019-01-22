@@ -1464,6 +1464,8 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	public boolean isDefaultNamespace(String namespaceUri) {
+		//判断是否是默认的命名空间, 实质是与http://www.springframework.org/schema/beans进行对比
+		//如果一致则认为是默认, 否则认为是自定义
 		return (!StringUtils.hasLength(namespaceUri) || BEANS_NAMESPACE_URI.equals(namespaceUri));
 	}
 

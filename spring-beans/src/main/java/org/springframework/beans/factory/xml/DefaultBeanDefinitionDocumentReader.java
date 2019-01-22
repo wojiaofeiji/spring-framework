@@ -126,6 +126,18 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 
 		if (this.delegate.isDefaultNamespace(root)) {
 			//处理profile属性
+			//<beans profile="dev">
+			//	...
+			//</beans>
+			//<beans profile="production">
+			//</beans>
+			//继承web环境时, 在web.xml中加入
+			//<context-param>
+			//	<param-name>spring.profiles.active</param-name>
+			//	<param-value>dev</param-value>
+			//</context-param>
+			//首先会获取beans节点是否定义了profile属性, 如果定义了则会去环境变量中寻找, 所以这里断言environment不能为空
+			//因为profile是可以同时指定多个, 需要对程序进行拆分, 并解析每个progile是都符合环境变量定义的, 不符合的则不浪费性能去解析
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
 			if (StringUtils.hasText(profileSpec)) {
 				String[] specifiedProfiles = StringUtils.tokenizeToStringArray(
@@ -164,19 +176,25 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	/**
 	 * Parse the elements at the root level in the document:
 	 * "import", "alias", "bean".
+	 * spring在xml存在两种定义bean声明方式：
+	 * 		<bean id="testbean" class="test.testbean" />
+	 * 		<tx:annotation-driven />
 	 * @param root the DOM root element of the document
 	 */
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
-		if (delegate.isDefaultNamespace(root)) {
+		//对beans处理 对命名空间判断是默认标签解析还是用户自定义标签解析
+		if (delegate.isDefaultNamespace(root)) { //默认标签解析
 			NodeList nl = root.getChildNodes();
 			for (int i = 0; i < nl.getLength(); i++) {
 				Node node = nl.item(i);
 				if (node instanceof Element) {
 					Element ele = (Element) node;
 					if (delegate.isDefaultNamespace(ele)) {
+						//对bean处理
 						parseDefaultElement(ele, delegate);
 					}
-					else {
+					else { //自定义标签解析
+						//对bean处理
 						delegate.parseCustomElement(ele);
 					}
 				}
@@ -188,16 +206,16 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 	private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
-		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
+		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) { //对import标签进行即系
 			importBeanDefinitionResource(ele);
 		}
-		else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) {
+		else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) { //对alias标签进行解析
 			processAliasRegistration(ele);
 		}
-		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
+		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) { //对bean标签进行解析
 			processBeanDefinition(ele, delegate);
 		}
-		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
+		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) { //对beans标签进行解析
 			// recurse
 			doRegisterBeanDefinitions(ele);
 		}
@@ -304,11 +322,15 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 * and registering it with the registry.
 	 */
 	protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
+		//委托delegate类的parseBeanDefinitionElement方法进行元素解析, 返回BeanDefinitionHolder类型的实例
+		//经过这个方法bdHolder已经有配置文件中的各类属性, 例如class、name、id、alias
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
 		if (bdHolder != null) {
+			//当返回的bdHolder不为空情况下若存在默认标签的子节点下再有自定义属性, 还需再次对自定义标签进行解析
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
 				// Register the final decorated instance.
+				//解析完成后, 需要对解析后的bdHolder进行注册
 				BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
 			}
 			catch (BeanDefinitionStoreException ex) {
@@ -316,6 +338,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 						bdHolder.getBeanName() + "'", ele, ex);
 			}
 			// Send registration event.
+			// 最后发出响应事件, 通知相关的监听器, 这个bean已经加载完毕了
 			getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
 		}
 	}
